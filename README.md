@@ -14,6 +14,8 @@ Python-based app to find options contracts that adhere to a configured strategy 
 
 ## HOW TO RUN
 
+Ensure the SECRETS_FILE_PATH environment variable is set to the .yaml file containing your polygon api key with the field POLYGON_API_KEY.
+
 Use findAll to find all the options that satisfy this strategy.
 ```python
 python3 -m app.main findAll longStraddleIV
