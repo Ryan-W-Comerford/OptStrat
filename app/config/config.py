@@ -8,6 +8,36 @@ class Config():
 
     POLYGON_API_KEY = key_file["POLYGON_API_KEY"]
 
+    # High Beta S&P 500 stocks that are liquid and not high option pricing
+    STOCKS = [
+        "AMD",
+        "TSM",
+        "INTC",
+        "CRM",
+        "ADBE",
+        "ORCL",
+        "NOW",
+        "META",
+        "NFLX",
+        "AMZN",
+        "EBAY",
+        "SQ",
+        "PYPL",
+        "COIN",
+        "MU",
+        "QCOM",
+        "AVGO",
+        "BA",
+        "CAT",
+        "DE",
+        "UNH",
+        "ABBV",
+        "MRK",
+        "XOM",
+        "CVX",
+        "SLB"
+    ]
+
     EARNINGS_LOOKAHEAD_DAYS = 30
     TARGET_DTE_RANGE = (20, 40)
 
