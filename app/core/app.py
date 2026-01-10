@@ -1,4 +1,5 @@
-from app.data.polygon import PolygonProvider
+from app.data.massive import MassiveProvider
+from app.data.alpha_vantage import AlphaProvider
 from app.config.config import config
 from app.strategy.iv_straddle import LongStraddleIVStrategy
 from app.strategy.strategy import Strategy
@@ -9,7 +10,8 @@ strategy_map = {
 
 class OptionsApp:
     def __init__(self):
-        self.provider = PolygonProvider(config.POLYGON_API_KEY)
+        self.polygon_provider = MassiveProvider(config.POLYGON_API_KEY)
+        self.alpha_provider = AlphaProvider(config.ALPHA_API_KEY)
 
     def get_strategy(self, name: str) -> Strategy:
         if name not in strategy_map:

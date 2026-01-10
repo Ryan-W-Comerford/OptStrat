@@ -14,7 +14,7 @@ CLI to find options contracts that adhere to a configured strategy using a Pytho
 
 ## HOW TO RUN
 
-Ensure the SECRETS_FILE_PATH environment variable is set to the .yaml file containing your polygon api key with the field POLYGON_API_KEY.
+Ensure the SECRETS_FILE_PATH environment variable is set to the .yaml file containing your massive api key with the field POLYGON_API_KEY.
 
 To start the CLI use below command.
 ```python

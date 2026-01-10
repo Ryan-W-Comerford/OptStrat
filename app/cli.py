@@ -17,7 +17,7 @@ def start_findall(commands):
         raise ValueError("Usage: findAll <strategy>")
     strategy = app.get_strategy(commands[1])
     print_candidates(
-        strategy.generate_candidates(app.provider)
+        strategy.generate_candidates(app.polygon_provider, app.alpha_provider)
     )
     
     return
@@ -26,7 +26,7 @@ def start_findone(commands):
     if len(commands) != 3:
         raise ValueError("Usage: findOne <strategy> <ticker>")
     strategy = app.get_strategy(commands[1])
-    candidates = strategy.generate_candidates(app.provider)
+    candidates = strategy.generate_candidates(app.polygon_provider, app.alpha_provider)
     filtered = [
         c for c in candidates
         if c.ticker.upper() == commands[2].upper()

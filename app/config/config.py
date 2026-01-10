@@ -7,6 +7,7 @@ class Config():
         key_file = yaml.safe_load(file)
 
     POLYGON_API_KEY = key_file["POLYGON_API_KEY"]
+    ALPHA_API_KEY = key_file["ALPHA_API_KEY"]
 
     # High Beta S&P 500 stocks that are liquid and not high option pricing
     STOCKS = [
