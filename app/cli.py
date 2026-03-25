@@ -103,11 +103,10 @@ def start_findone(commands: list[str]) -> None:
 def start_sync(_commands: list[str]) -> None:
     """
     Sync all pending trades:
-      - Updates stock_price_current for every pending trade (regardless of earnings status)
-      - For trades where earnings have passed: resolves win/loss using IV expansion
+      - Updates stock_price_current for every pending trade
+      - For trades where earnings have passed: resolves win/loss
+        Priority: real dollar P&L (option day.close) → IV expansion proxy → move vs breakeven
         Exit point = EXIT_DAYS_BEFORE_EARNINGS days before earnings (default: 1)
-        P&L = % change in realized vol from scan date to exit date
-        Falls back to stock move vs breakeven if IV data unavailable
     """
     pending = app.store.get_pending()
     if not pending:
@@ -150,6 +149,17 @@ def start_sync(_commands: list[str]) -> None:
                 print(f"  {C.YELLOW}⚠️  {trade['ticker']} — no exit price found around {exit_date}. Skipping.{C.RESET}")
                 continue
 
+            # Try to fetch exit option prices (day.close on exit date)
+            # These are available on $29 plan via the snapshot day aggregate
+            exit_call_price = 0.0
+            exit_put_price  = 0.0
+            try:
+                if trade["call_symbol"] and trade["put_symbol"]:
+                    exit_call_price = app.market.get_option_day_close(trade["call_symbol"], exit_date) or 0.0
+                    exit_put_price  = app.market.get_option_day_close(trade["put_symbol"],  exit_date) or 0.0
+            except Exception:
+                pass
+
             iv_at_entry = app.market.get_iv_as_of(trade["ticker"], as_of=scan_date)
             iv_at_exit  = app.market.get_iv_as_of(trade["ticker"], as_of=exit_date)
 
@@ -160,15 +170,24 @@ def start_sync(_commands: list[str]) -> None:
                 total_cost=trade["total_cost"] or 0.0,
                 stock_price_at_exit=exit_price,
                 stock_price_at_scan=trade["stock_price_at_scan"] or 0.0,
+                exit_call_price=exit_call_price,
+                exit_put_price=exit_put_price,
+                call_entry_price=trade["call_entry_price"] or 0.0,
+                put_entry_price=trade["put_entry_price"] or 0.0,
             )
 
-            iv_str = (
-                f"IV {iv_at_entry:.3f} → {iv_at_exit:.3f}"
-                if iv_at_entry and iv_at_exit
-                else "no IV data"
-            )
+            # Build display string based on what data was available
+            if exit_call_price and exit_put_price and trade["call_entry_price"]:
+                entry_total = (trade["call_entry_price"] or 0) + (trade["put_entry_price"] or 0)
+                exit_total  = exit_call_price + exit_put_price
+                pnl_str = f"${entry_total:.2f} → ${exit_total:.2f}  (${(exit_total-entry_total)*100:+.0f}/contract)"
+            elif iv_at_entry and iv_at_exit:
+                pnl_str = f"IV {iv_at_entry:.3f} → {iv_at_exit:.3f}"
+            else:
+                pnl_str = "no price data"
+
             icon = "✅" if status == "resolved_win" else ("❓" if status == "unresolvable" else "❌")
-            print(f"  {icon} {C.BOLD}{trade['ticker']:<6}{C.RESET}  exit={exit_date}  {iv_str}  [{status}]")
+            print(f"  {icon} {C.BOLD}{trade['ticker']:<6}{C.RESET}  exit={exit_date}  {pnl_str}  [{status}]")
             resolved += 1
 
         except Exception as e:
@@ -234,7 +253,7 @@ def start_pending(_commands: list[str]) -> None:
 
     print(f"\n{C.BOLD}  PENDING TRADES{C.RESET}  {C.DIM}({len(pending)} open){C.RESET}")
     print(f"  {C.DIM}{'─' * 68}{C.RESET}")
-    print(f"  {C.DIM}{'TICKER':<7} {'STRATEGY':<20} {'EARNINGS':<12} {'DTE':<5} {'ENTRY $':<10} {'CURRENT $':<10} {'CALL':<26} {'PUT'}{C.RESET}")
+    print(f"  {C.DIM}{'TICKER':<7} {'STRATEGY':<20} {'EARNINGS':<12} {'DTE':<5} {'STOCK $':<10} {'OPT COST':<10} {'CALL':<26} {'PUT'}{C.RESET}")
     print(f"  {C.DIM}{'─' * 68}{C.RESET}")
 
     for t in pending:
@@ -244,6 +263,7 @@ def start_pending(_commands: list[str]) -> None:
         dte      = f"{t['days_to_earnings']}d" if t["days_to_earnings"] else "?"
         entry    = f"${t['stock_price_at_scan']:.2f}" if t["stock_price_at_scan"] else "n/a"
         current  = f"${t['stock_price_current']:.2f}" if t["stock_price_current"] else "not synced"
+        opt_cost = f"${t['total_cost']:.0f}" if t["total_cost"] else "n/a"
         call_sym = t["call_symbol"] or "n/a"
         put_sym  = t["put_symbol"] or "n/a"
 
@@ -256,7 +276,7 @@ def start_pending(_commands: list[str]) -> None:
             f" {C.WHITE}{edate:<12}{C.RESET}"
             f" {C.DIM}{dte:<5}{C.RESET}"
             f" {C.DIM}{entry:<10}{C.RESET}"
-            f" {C.GREEN if t['stock_price_current'] else C.DIM}{current:<10}{C.RESET}"
+            f" {C.YELLOW}{opt_cost:<10}{C.RESET}"
             f" {C.DIM}{call_sym:<26}{C.RESET}"
             f" {C.DIM}{put_sym}{C.RESET}"
         )

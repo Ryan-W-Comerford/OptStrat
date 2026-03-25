@@ -50,7 +50,7 @@ class Config:
             "ABBV", "MRK", "XOM", "CVX", "EBAY",
         ]
 
-        self.EARNINGS_LOOKAHEAD_DAYS: int = 30
+        self.EARNINGS_LOOKAHEAD_DAYS: int = 55
         self.TARGET_DTE_RANGE: tuple[int, int] = (15, 50)
 
         self.MIN_IV_RANK: float = 30.0

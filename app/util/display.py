@@ -94,12 +94,20 @@ def print_history(trades: list, stats: dict) -> None:
         cost = f"${t['total_cost']:.2f}" if t["total_cost"] else "n/a"
 
         strategy_tag = f"{C2.DIM}[{t['strategy']}]{C2.RESET} " if t['strategy'] else ""
+        method = t["pnl_method"] if "pnl_method" in t.keys() else None
+        method_tag = ""
+        if method == "real_dollar":
+            method_tag = f"  {C2.GREEN}[real $]{C2.RESET}"
+        elif method == "iv_expansion":
+            method_tag = f"  {C2.DIM}[iv proxy]{C2.RESET}"
+        elif method == "move_vs_breakeven":
+            method_tag = f"  {C2.DIM}[move vs be]{C2.RESET}"
         print(
             f"  {C2.BOLD}{t['ticker']:<6}{C2.RESET} "
             f"{C2.DIM}{t['earnings_date']}{C2.RESET}  "
             f"{strategy_tag}"
             f"IV {t['iv_rank']:.0f}  "
-            f"cost={cost}  move={move}  be={be}  pnl={pnl}  {icon}"
+            f"cost={cost}  move={move}  be={be}  pnl={pnl}{method_tag}  {icon}"
         )
         if t["notes"]:
             print(f"         {C2.DIM}{t['notes']}{C2.RESET}")
@@ -132,29 +140,36 @@ def print_backtest(trades: list) -> None:
     best  = max(trades, key=lambda t: t["pnl_estimate"] or 0)
     worst = min(trades, key=lambda t: t["pnl_estimate"] or 0)
 
+    # Determine dominant P&L method across resolved trades
+    methods = [t["pnl_method"] for t in trades if "pnl_method" in t.keys() and t["pnl_method"]]
+    method_note = "real dollar P&L" if "real_dollar" in methods else "iv expansion proxy" if "iv_expansion" in methods else "move vs breakeven"
+
     print(f"\n{C2.BOLD}{C2.CYAN}  BACKTEST RESULTS{C2.RESET}  {C2.DIM}({len(trades)} resolved trades){C2.RESET}")
     print(f"  {C2.CYAN}{'═' * 58}{C2.RESET}")
     print(f"  Win Rate   {C2.BOLD}{win_rate:.1f}%{C2.RESET}   {C2.GREEN}{len(wins)}W{C2.RESET} / {C2.RED}{len(losses)}L{C2.RESET}")
     pnl_color = C2.GREEN if avg_pnl > 0 else C2.RED
-    print(f"  Avg P&L    {pnl_color}{C2.BOLD}{avg_pnl:+.1f}%{C2.RESET}  {C2.DIM}(move % minus breakeven %){C2.RESET}")
+    print(f"  Avg P&L    {pnl_color}{C2.BOLD}{avg_pnl:+.1f}%{C2.RESET}  {C2.DIM}({method_note}){C2.RESET}")
     print(f"  Best       {C2.GREEN}{best['ticker']}  {(best['pnl_estimate'] or 0):+.1f}%{C2.RESET}")
     print(f"  Worst      {C2.RED}{worst['ticker']}  {(worst['pnl_estimate'] or 0):+.1f}%{C2.RESET}")
 
-    print(f"\n  {C2.DIM}{'TICKER':<7} {'EARNINGS':>10} {'MOVE':>7} {'BE':>7} {'P&L':>8}  STATUS{C2.RESET}")
-    print(f"  {C2.DIM}{'─' * 58}{C2.RESET}")
+    print(f"\n  {C2.DIM}{'TICKER':<7} {'EARNINGS':>10} {'MOVE':>7} {'BE':>7} {'P&L':>8}  {'METHOD':<16} STRATEGY{C2.RESET}")
+    print(f"  {C2.DIM}{'─' * 72}{C2.RESET}")
 
     for t in sorted(trades, key=lambda t: t["pnl_estimate"] or 0, reverse=True):
-        move = f"{t['actual_move_pct']:.1f}%" if t["actual_move_pct"] is not None else "—"
-        be   = f"{t['breakeven_pct']:.1f}%"   if t["breakeven_pct"]   is not None else "—"
-        pnl  = f"{t['pnl_estimate']:+.1f}%"   if t["pnl_estimate"]    is not None else "—"
-        color = C2.GREEN if t["status"] == "resolved_win" else C2.RED
-        strat = f" {C2.DIM}{t['strategy']}{C2.RESET}" if t['strategy'] else ""
+        move   = f"{t['actual_move_pct']:.1f}%" if t["actual_move_pct"] is not None else "—"
+        be     = f"{t['breakeven_pct']:.1f}%"   if t["breakeven_pct"]   is not None else "—"
+        pnl    = f"{t['pnl_estimate']:+.1f}%"   if t["pnl_estimate"]    is not None else "—"
+        method = t["pnl_method"] if "pnl_method" in t.keys() else None or "—"
+        color  = C2.GREEN if t["status"] == "resolved_win" else C2.RED
+        mcolor = C2.GREEN if method == "real_dollar" else C2.DIM
+        strat  = t['strategy'] or ""
         print(
             f"  {C2.BOLD}{t['ticker']:<7}{C2.RESET}"
             f" {t['earnings_date']:>10}"
             f" {move:>7} {be:>7}"
             f" {color}{pnl:>8}{C2.RESET}"
-            f"{strat}"
+            f"  {mcolor}{method:<16}{C2.RESET}"
+            f" {C2.DIM}{strat}{C2.RESET}"
         )
     print()
 

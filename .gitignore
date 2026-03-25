@@ -3,3 +3,4 @@ app/data/cache/earnings.csv
 app/data/history/trades.db
 **/secrets.yaml
 **/api_secrets.yaml
+test.py

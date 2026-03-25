@@ -33,6 +33,8 @@ class MassiveProvider(Provider):
                     price = snapshot.min.close
                 elif snapshot.day and snapshot.day.close:
                     price = snapshot.day.close
+                elif snapshot.prev_day and snapshot.prev_day.close:
+                    price = snapshot.prev_day.close  # market closed / weekend fallback
             if price is None:
                 raise ValueError(f"No price available for {ticker}")
             return float(price)
@@ -68,6 +70,12 @@ class MassiveProvider(Provider):
                 bid = last_quote.bid if last_quote else 0.0
                 ask = last_quote.ask if last_quote else 0.0
 
+                # $29 plan: last_quote is None — fall back to day.close as mid-price
+                if bid == 0.0 and ask == 0.0 and day and day.close:
+                    mid = float(day.close)
+                    bid = mid
+                    ask = mid
+
                 chain.append(OptionContract(
                     symbol=details.ticker,
                     strike=details.strike_price,
@@ -83,6 +91,23 @@ class MassiveProvider(Provider):
                     ask=ask or 0.0,
                 ))
         return chain
+
+    def get_option_day_close(self, option_symbol: str, on_date: date) -> float | None:
+        """
+        Return the day.close price for an option contract on a given date.
+        Uses the daily aggregates endpoint — available on $29 plan.
+        Falls back to nearest trading day within 3 days if exact date has no data.
+        """
+        with self.get_client() as client:
+            aggs = list(client.list_aggs(
+                option_symbol,
+                multiplier=1,
+                timespan="day",
+                from_=str(on_date),
+                to=str(on_date + timedelta(days=3)),
+                limit=4,
+            ))
+        return float(aggs[0].close) if aggs else None
 
     def get_closing_price(self, ticker: str, on_date: date) -> float | None:
         """Return the closing price on or after on_date (handles weekends/holidays)."""

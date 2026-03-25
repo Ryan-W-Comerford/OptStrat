@@ -86,20 +86,34 @@ A fast, lightweight scan of the full watchlist showing **current IV rank** for e
 | Status | Meaning |
 |---|---|
 | `pending` | Candidate found, event not yet passed — price updated on every `sync` |
-| `resolved_win` | IV expanded from entry to exit |
-| `resolved_loss` | IV contracted or flat from entry to exit |
-| `unresolvable` | No IV or cost data available |
+| `resolved_win` | Option value or IV expanded from entry to exit |
+| `resolved_loss` | Option value or IV contracted from entry to exit |
+| `unresolvable` | No option price or IV data available |
 | `expired` | Options expired with no resolution |
 
 ### Win/Loss Logic
 
-The strategy exits **1 day before the event/earnings date**. P&L is measured as % change in realized volatility from scan date to exit date:
+The strategy exits **1 day before the event/earnings date**. P&L is calculated using the following priority order:
 
+**1. Real dollar P&L** `[real $]` — used when option prices are available
+```
+pnl = (exit_call + exit_put - entry_call - entry_put) / (entry_call + entry_put) * 100
+```
+Option prices come from `day.close` on the daily aggregate — available on the $29 Massive plan. Entry price is stored at scan time, exit price is fetched on resolution.
+
+**2. IV expansion proxy** `[iv proxy]` — fallback when option prices unavailable
 ```
 pnl = (iv_at_exit - iv_at_entry) / iv_at_entry * 100
 ```
 
-> **Note:** On the $29 Massive plan, bid/ask quotes are not returned — `Est. Cost` shows as `n/a`. Upgrade to Stocks Advanced ($199) for exact dollar P&L calculation.
+**3. Move vs breakeven** `[move vs be]` — last resort
+```
+pnl = actual_stock_move% - breakeven%
+```
+
+The P&L method used is shown in `history`, `backtest`, and the `visualize` dashboard so you always know how trustworthy each result is.
+
+> **Note:** `Est. Cost` in scan output shows `(call + put) * 100` using `day.close` prices — available on the $29 plan. Live bid/ask quotes require the $199 plan.
 
 ---
 

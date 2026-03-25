@@ -517,7 +517,7 @@ async function loadData() {
           <thead>
             <tr>
               <th>Ticker</th><th>Strategy</th><th>Scan Date</th>
-              <th>Event Date</th><th>IV Rank</th><th>Status</th><th>P&L Est.</th><th>Notes</th>
+              <th>Event Date</th><th>IV Rank</th><th>Cost</th><th>Status</th><th>P&L</th><th>Method</th><th>Notes</th>
             </tr>
           </thead>
           <tbody>
@@ -528,8 +528,10 @@ async function loadData() {
                 <td style="color:var(--dim)">${t.scan_date}</td>
                 <td style="color:var(--dim)">${t.earnings_date}</td>
                 <td style="color:var(--yellow)">${t.iv_rank ? t.iv_rank.toFixed(0) : '—'}</td>
+                <td style="color:var(--text)">${t.total_cost ? '$' + t.total_cost.toFixed(0) : '—'}</td>
                 <td>${statusBadge(t.status)}</td>
                 <td class="${t.pnl_estimate >= 0 ? 'pnl-pos' : 'pnl-neg'}">${fmtPct(t.pnl_estimate)}</td>
+                <td style="color:${t.pnl_method === 'real_dollar' ? 'var(--green)' : 'var(--dim)'};font-size:11px">${t.pnl_method || '—'}</td>
                 <td style="color:var(--dim);font-size:11px">${t.notes || '—'}</td>
               </tr>`).join('')}
           </tbody>
